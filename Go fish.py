@@ -54,7 +54,7 @@ if TEST:
 # Make a list with players in the game ##including the human
 print("Hi there, welcome to Go Fish!!")
 name = input("What is your name? ")
-print("Hi",name,)
+print("\nHi",name,)
 players = int(input("You can play against up to 4 people. \n"
                "How many people would you like to play against? "))
 playernames = names[0:players]
@@ -101,9 +101,29 @@ for p in range(players):
     print(playernames[p], end='')
     if p<players-1:
         print(', ', end='')
+#print()
+response = input("\nPress ENTER to start playing")
 print()
-response = input("Press any key to start playing")
 
 # Start playing
-print()
-print("Haven't programmed that yet")
+gameover = False
+while not gameover:
+    for p in range(players):
+        if p==humanpos:
+            # player's turn  !!! need to program it
+            # simply input allowing quit only for now
+            print("Your turn now. Please enter your move. All you can actually do yet is type Q then ENTER to quit.")
+            response = input()
+            print()
+            if response.upper()=="Q":
+                gameover = True
+        else:
+            # computer turn   !!! need to program the computer play
+            print(playernames[p], "to play next. Not programmed yet,", playernames[p], "will pass.")
+            response = input("Press ENTER to continue.")
+            print()
+        if gameover:
+            break
+
+# game finished so say goodbye
+print("Game finished, hope you enjoyed it! Play again soon.")
