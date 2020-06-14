@@ -10,7 +10,7 @@
 import random
 import time
 
-TEST = True
+TEST = False
 names = ['Gertrude', 'Doris', 'Boris', 'Bert', 'Larry'] # ['Boris', 'Doris', 'Horace', 'Norris', 'Phyllis']
 suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs']
 ranks = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King']
@@ -139,7 +139,7 @@ def workOutHumanMove(movetext):
         if movetext[1]==' ':
             # match the initial to a player
             for i in range(len(playernames)):
-                if movetext[0].upper()==playernames[i][0].upper():
+                if movetext[0].upper()==playernames[i][0].upper() and i != humanpos:
                     # found the player the human wants to ask
                     askplayer = i
             if TEST:
@@ -159,7 +159,7 @@ def workOutHumanMove(movetext):
                             action = 2
                     if askcard==-1:
                         # couldn't match the card
-                        print('What on earth is card ', movetext, '?', sep='')
+                        print('What on earth is ', movetext, '?', sep='')
                 else:
                     # didn't find a 'for' after the player initial
                     print('I don\'t know what "', movetext, '" is supposed to mean.', sep='')
@@ -175,9 +175,10 @@ def workOutHumanMove(movetext):
 
     # we've now finished analysing the human's move input, so repeat back for confirmation 
     if action==1:
+        print()
         print('So you want to leave the game because you\'ve got the mardies. Is that right?')
     elif action==2:
-        print('So you want to ask ', playernames[askplayer], ' for ', ranks[askcard],'s. Is that right?', sep='')
+        print('So you\'re going to say "', playernames[askplayer], ', do you have any ', ranks[askcard],'s?" Is that right?', sep='')
 
     # get confirmation if we need it
     if action>0:
@@ -187,6 +188,13 @@ def workOutHumanMove(movetext):
 
     return {'action':action, 'ask':askplayer, 'card':askcard}
 
+# Carry out the human player's move
+def doHumanMove(askplayer, askcard):
+    cardcount = 0
+    for c in range(length(hand[askplayer])):
+        if hand[askplayer][c][0]==askcard:
+            pass
+            
 
 # === MAIN GAME LOOP ===
 gameover = False
@@ -195,7 +203,9 @@ while not gameover:
         if p==humanpos:
             # Human player's turn. Input a move, check it, and repeat until they input a valid move 
             # !!! display their hand and the state of the game
-            print("Your turn now. Please enter your move: ", end='')
+            print('Your turn now. This is your hand:')
+            showcards(hand[p], 0)
+            print('\nPlease enter your move: ', end='')
             while True:
                 movetext = input()
                 if movetext.strip() != '':
