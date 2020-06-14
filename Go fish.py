@@ -2,16 +2,20 @@
 # James Francis, Apr 2020
 #
 # 29/04/2020 BAF Added in Beth's bit
+# 05/06/2020 JGF Full dummy game loop with everyone passing
+# 14/06/2020 JGF Can type in the human move --- in test
 
 # SETUP
 
 import random
 import time
 
-TEST = 0
+TEST = True
 names = ['Gertrude', 'Doris', 'Boris', 'Bert', 'Larry'] # ['Boris', 'Doris', 'Horace', 'Norris', 'Phyllis']
 suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs']
 ranks = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King']
+shortranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+
 
 # FUNCTIONS
 
@@ -105,23 +109,118 @@ for p in range(players):
 response = input("\nPress ENTER to start playing")
 print()
 
-# Start playing
+# ==== SOME FUNCTIONS FOR PLAYING THE GAME ====
+
+
+# Tidy up a string, replacing all non alphanumeric with spaces, getting rid of multiple, leading and trailing spaces
+# !!! program this later
+
+# The human player has input their move, 
+# the computer checks it makes sense, works out what it means, and confirms it with the human
+def workOutHumanMove(movetext):
+    askplayer = -1
+    askcard = -1
+    action = -1 # which works like this: -1=couldn't figure it out, 0=nothing input or changed mind, 1=quit, 2=ask player for a card
+    movetext = movetext.strip()
+    # !!! need to tidy the text up properly but program that later
+    if movetext=='':
+        action = 0
+    elif movetext.upper()=='Q': 
+        # player wants to quit
+        action = 1
+    elif len(movetext)<11:
+        # not long enough to contain a valid move
+        print('That makes no sense you dinkus!')
+    elif movetext[:4].upper()=='ASK ':
+        # wants to ask for a card, so work out which player
+        movetext = movetext[4:]
+        if TEST:
+            print('---DECODING : <ASK>+"', movetext, '"', sep='')
+        if movetext[1]==' ':
+            # match the initial to a player
+            for i in range(len(playernames)):
+                if movetext[0].upper()==playernames[i][0].upper():
+                    # found the player the human wants to ask
+                    askplayer = i
+            if TEST:
+                print('---DECODING : Player #', askplayer, sep='')
+            if askplayer != -1:
+                # the next word should be 'for'
+                movetext = movetext[2:]
+                if movetext[:4].upper()=='FOR ':
+                    # finally work out which card the human is asking for
+                    movetext = movetext[4:]
+                    if TEST:
+                        print('---DECODING : <ASK>+<Player #', askplayer, '>+"', movetext, '"', sep='')
+                    for i in range(len(shortranks)):
+                        if movetext.upper()==shortranks[i]:
+                            # found the card the human wants to ask for
+                            askcard = i
+                            action = 2
+                    if askcard==-1:
+                        # couldn't match the card
+                        print('What on earth is card ', movetext, '?', sep='')
+                else:
+                    # didn't find a 'for' after the player initial
+                    print('I don\'t know what "', movetext, '" is supposed to mean.', sep='')
+            else:
+                # the initial after 'ask' didn't match a player
+                print('There is no player', movetext[0], 'in the game.')
+        else:
+            # after 'ask' there wasn't a single character then a space
+            print('You need to give a player\'s initial.')
+    else:
+        # can't work out what this move means
+        print('That\'s not a proper move you dinkus!')
+
+    # we've now finished analysing the human's move input, so repeat back for confirmation 
+    if action==1:
+        print('So you want to leave the game because you\'ve got the mardies. Is that right?')
+    elif action==2:
+        print('So you want to ask ', playernames[askplayer], ' for ', ranks[askcard],'s. Is that right?', sep='')
+
+    # get confirmation if we need it
+    if action>0:
+        confirm = input('Press ENTER to continue, or type N then ENTER to change your mind. ')
+        if confirm.strip() != '':
+            action = 0
+
+    return {'action':action, 'ask':askplayer, 'card':askcard}
+
+
+# === MAIN GAME LOOP ===
 gameover = False
 while not gameover:
     for p in range(players):
         if p==humanpos:
-            # player's turn  !!! need to program it
-            # simply input allowing quit only for now
-            print("Your turn now. Please enter your move. All you can actually do yet is type Q then ENTER to quit.")
-            response = input()
+            # Human player's turn. Input a move, check it, and repeat until they input a valid move 
+            # !!! display their hand and the state of the game
+            print("Your turn now. Please enter your move: ", end='')
+            while True:
+                movetext = input()
+                if movetext.strip() != '':
+                    decoded = workOutHumanMove(movetext)
+                    if decoded['action']>0: 
+                        # successful input so go on to carry it out
+                        break
+                print('Try again, or type Q then ENTER to quit: ', end='')
+
+            # !!! carry out their move
+            # !!! check it's legal : human must have one of the cards, and player must have some cards
             print()
-            if response.upper()=="Q":
+            if decoded['action']==1: 
                 gameover = True
+            elif decoded['action']==2:
+                print('Actually doing the move isn\'t programmed yet.')
+            print()
+
         else:
             # computer turn   !!! need to program the computer play
+            print()
             print(playernames[p], "to play next. Not programmed yet,", playernames[p], "will pass.")
             response = input("Press ENTER to continue.")
             print()
+
         if gameover:
             break
 
