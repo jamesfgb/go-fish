@@ -4,6 +4,13 @@
 # 29/04/2020 BAF Added in Beth's bit
 # 05/06/2020 JGF Full dummy game loop with everyone passing
 # 14/06/2020 JGF Can type in the human move --- in test
+# 05/07/2020 JGF Full game with AI, plays the game correctly. Various things to improve.
+
+#!!! things to fix or improve:
+# grammar : passes 1 cards
+# grammar : use "You"
+# surplus blank line after human move
+# AI can ask a player for cards twice
 
 # === SETUP : Python libraries and program settings ===
 
@@ -15,7 +22,7 @@ names = ['Gertrude', 'Doris', 'Boris', 'Bert', 'Larry']  # ['Boris', 'Doris', 'H
 suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs']
 ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']
 shortranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-RANKS_IN_PACK = 10
+RANKS_IN_PACK = 8
 
 # === FUNCTIONS needed throughout the program ===
 
@@ -30,21 +37,24 @@ def showcards(cards, num):
         print(list(cards[c].values()))
 
 
-# Check for a set of 4 cards in a player's hand
+# Check for sets of 4 cards in a player's hand
 # Remove the matching cards if one is found
+# It's possible (but unlikely) there could be more than one set at the start of the game
+# so allow for that possibility and return a count of sets found
 def checkForSet(cards):
     cardcount = {x:0 for x in ranks}
-    setfound = ''
+    found = 0
     for c in cards:
         cardcount[c['rank']] += 1
         if cardcount[c['rank']]==4:
-            setfound = c['rank']
-            break
-    if setfound!='':
+            found += 1
+    if found>0:
         for c in cards.copy():
-            if c['rank']==setfound:
+            if cardcount[c['rank']]==4:
                 cards.remove(c)
-    return setfound
+    if TEST:
+        print('--- CHECKING', cardcount, found)
+    return found
 
 # === GET THE GAME STARTED ===
 
@@ -91,14 +101,9 @@ print("\n")
 playernames.append(name)
 players += 1
 humanpos = players - 1
-if players<=4:
-    dealsize = 8
-elif players==5:
-    dealsize = 7
-else:
-    dealsize = 6
+dealsize = (len(pack) - players*2 - 1) // players
 
-print("Dealing the cards")
+print('Dealing the cards,', dealsize, 'each.')
 time.sleep(1)
 
 hand = [[] for p in range(players)]
@@ -126,11 +131,14 @@ knowledge = [{x : -1 for x in ranks} for y in range(players)]
 print(name, ", this is your hand.  Good luck with it!")
 showcards(hand[humanpos], 0)
 print()
-setfound = checkForSet(hand[humanpos])
-if setfound!='':
-    setsmade += 1
-    playersetsmade[humanpos] += 1
-    print ('You already have a set of', setfound+'s.', 'That\'s a great start!')
+setsfound = checkForSet(hand[humanpos])
+if setsfound!=0:
+    setsmade += setsfound
+    playersetsmade[humanpos] += setsfound
+    if setsfound==1:
+        print ('You already have a set, that\'s a great start!')
+    else:
+        print ('You already have', setsfound, 'sets, that\'s a fantastic start!')
     if TEST:
         print("--- JUST CHECKING! Your hand is now:")
         showcards(hand[humanpos], 0)
@@ -138,11 +146,11 @@ if setfound!='':
 
 print("We'll play in this order: ", end='')
 for p in range(players):
+    
     print(playernames[p], end='')
     if p<players-1:
         print(', ', end='')
-#print()
-response = input("\nPress ENTER to start playing")
+print()
 print()
 
 # ==== SOME FUNCTIONS FOR PLAYING THE GAME ====
@@ -259,10 +267,12 @@ def doTheMove(player1, player2, askfor):
         doPickUpFor(player1, player1==humanpos)
     else:
         # Announce the matching cards and add to player1's hand
-        print(playernames[player2], 'passes', len(matchedcards), 'cards to', playernames[player1], end='.\n')
+        print(playernames[player2], 'passes', len(matchedcards), 'cards.')
         hand[player1].extend(matchedcards)
-    for i
-    knowledge[askfor] = player1
+    # record in the other players' knowledge that player1 holds these cards
+    for p in range(players):
+        if p!=player1:
+            knowledge[p][askfor] = player1
 
 
 # === MAIN GAME LOOP ===
@@ -275,20 +285,23 @@ while not gameover:
             # First display the state of the game.
             # !!! work out how to clear the screen to stop cheating by looking back
             # !!! improve the ordering so it starts from the human player's virtual left
-            print('Your turn now, this is how things are in the game:')
+            print('Your turn now, press ENTER to continue.', end='')
+            response = input()
+
+            print('This is how things are in the game:')
             for p in range(players):
                 if p!=humanpos:
-                    print(playernames[p], 'has', len(hand[p]), 'card(s) and', playersetsmade[p], 'sets.')
+                    print('-', playernames[p], 'has', len(hand[p]), 'card(s) and', playersetsmade[p], 'sets')
                 else:
-                    print('You have', len(hand[p]), 'card(s) and', playersetsmade[p], 'sets.')
+                    print('- You have', len(hand[p]), 'card(s) and', playersetsmade[p], 'sets')
             print()
 
+            # !!! don't run through all this if there are no cards in either the hand or the pack
             # Pick up if needed
             if len(hand[p])!=0:
                 print('This is your hand:')
                 showcards(hand[p], 0)
             else:
-                print('Your turn now, and you have no cards.')
                 doPickUpFor(p, True)
 
             # Check if the player now has any cards, and carry out their turn
@@ -315,9 +328,10 @@ while not gameover:
                     doTheMove(p, decodedmove['ask'], decodedmove['card'])
                     print()
                     # check if they made a set
-                    if checkForSet(hand[p])!='':
-                        setsmade += 1
-                        playersetsmade[p] += 1
+                    setsfound = checkForSet(hand[p])
+                    if setsfound!=0:
+                        setsmade += setsfound
+                        playersetsmade[p] += setsfound
                         print ('You\'ve made a new set. You now have', playersetsmade[p], 'set(s) and', len(hand[p]), 'cards.')
                         if TEST:
                             print("--- JUST CHECKING! Your hand is now:")
@@ -328,11 +342,22 @@ while not gameover:
 
         else:
             # computer turn
-            print(playernames[p], 'to play next.')
+            print(playernames[p], 'to play next. Press ENTER to continue.', end='')
+            response = input()
+
+            # Check for existing sets in their hand. This could happen at the start of the game.
+            setsfound = checkForSet(hand[p])
+            if setsfound!=0:
+                setsmade += setsfound
+                playersetsmade[p] += setsfound
+                if setsfound==1:
+                    print (playernames[p], 'starts by putting down a set.')
+                else:
+                    print (playernames[p], 'starts by putting down', setsfound, 'sets!')
 
             # Pick up if needed
             if len(hand[p])==0:
-                doPickUpFor(p, True)
+                doPickUpFor(p, False)
 
             # Check if the player now has any cards, and carry out their turn
             if len(hand[p])==0:
@@ -346,8 +371,8 @@ while not gameover:
                     print("--- JUST CHECKING! Their hand :")
                     showcards(hand[p], 0)
                 askcard = hand[p][random.randint(1, len(hand[p])) - 1]['rank']
-                if knowledge[askcard]!=-1:
-                    askplayer = knowledge[askcard]
+                if knowledge[p][askcard]!=-1:
+                    askplayer = knowledge[p][askcard]
                 else:
                     # Ask a randomly chosen player, making sure not to try to ask themselves
                     # or a player with no cards.
@@ -356,19 +381,18 @@ while not gameover:
                         askplayer = random.randint(0, players - 1)
 
                 # Now carry out the chosen move
-                print('"', playernames[askplayer], ', do you have any ', askcard,'s?"', sep='')
+                print(playernames[p], ' asks ', playernames[askplayer], ' for ', askcard,'s. ', sep='', end='')
                 doTheMove(p, askplayer, askcard)
 
                 # check if they made a set
-                if checkForSet(hand[p])!='':
+                if checkForSet(hand[p])!=0:
                     setsmade += 1
                     playersetsmade[p] += 1
                     print (playernames[p], 'made a new set.')
 
             # End of computer player's turn.
 
-        # Turn completed so pause before going on to the next player.
-        response = input("Press ENTER to continue.")
+        # Turn completed so go on to the next player.
         print()
 
         # Before going on to the next player, check if all the sets are made
@@ -376,7 +400,7 @@ while not gameover:
         if setsmade==RANKS_IN_PACK:
             print('That\'s all the sets made. Here is the final score:')
             for p in range(players):
-                print(playernames[p], ':', setsmade[p])
+                print(playernames[p], ':', playersetsmade[p])
             print()
             gameover = True
 
